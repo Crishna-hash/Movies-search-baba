@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini IMDB</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #111;
+  color: #fff;
+  margin: 0;
+  padding: 0;
+}
+
+header {
+  background: #222;
+  padding: 15px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+section {
+  padding: 20px;
+}
+
+.movie-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 15px;
+}
+
+.movie-card {
+  background: #1a1a1a;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.movie-card:hover {
+  background: #333;
+}
+
+.movie-card img {
+  width: 100%;
+  border-radius: 8px;
+}
+
+#details-page {
+  display: none;
+  padding: 20px;
+}
+
+#details-page img {
+  width: 250px;
+  border-radius: 10px;
+}
+
+.back-btn {
+  background: #ffcc00;
+  padding: 8px 15px;
+  border-radius: 5px;
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<header>Mini IMDB</header>
+
+<section>
+<input id="searchBox" type="text" placeholder="Search movies..." style="width:100%;padding:10px;border-radius:5px;border:none;">
+</section>
+
+<section id="trending">
+<h2>🔥 Trending</h2>
+<div class="movie-grid" id="trendingGrid"></div>
+</section>
+
+<section id="theaters">
+<h2>🎬 In Theaters</h2>
+<div class="movie-grid" id="theatersGrid"></div>
+</section>
+
+<section id="quickpicks">
+<h2>⭐ Quick Picks</h2>
+<div class="movie-grid" id="quickGrid"></div>
+</section>
+
+<!-- MOVIE DETAILS PAGE -->
+<section id="details-page">
+<button class="back-btn" onclick="goBack()">← Back</button>
+<h2 id="details-title"></h2>
+<img id="details-poster">
+<p id="details-release"></p>
+<p id="details-rating"></p>
+<p id="details-overview"></p>
+</section>
+
+<script>
+const API_KEY = "35e35567c694ea16574175e69f06fdc3";
+const IMG = "https://image.tmdb.org/t/p/w500";
+
+// Fetch helper
+async function fetchMovies(url) {
+  const res = await fetch(url);
+  const data = await res.json();
+  return data.results;
+}
+
+// Render movie cards
+function renderMovies(movies, containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+
+  movies.forEach(movie => {
+    const div = document.createElement("div");
+    div.classList.add("movie-card");
+
+    div.innerHTML = `
+      <img src="${IMG + movie.poster_path}" alt="">
+      <p>${movie.title}</p>
+    `;
+
+    div.onclick = () => showDetails(movie.id); // 👈 CLICK HANDLER
+
+    container.appendChild(div);
+  });
+}
+
+// Show movie details
+async function showDetails(id) {
+  const url = `https://api.themoviedb.org/3/movie/${id}?api_key=${API_KEY}`;
+  const movie = await fetch(url).then(res => res.json());
+
+  document.getElementById("details-title").innerText = movie.title;
+  document.getElementById("details-poster").src = IMG + movie.poster_path;
+  document.getElementById("details-release").innerText = "Release: " + movie.release_date;
+  document.getElementById("details-rating").innerText = "Rating: " + movie.vote_average;
+  document.getElementById("details-overview").innerText = movie.overview;
+
+  document.getElementById("details-page").style.display = "block";
+  document.getElementById("trending").style.display = "none";
+  document.getElementById("theaters").style.display = "none";
+  document.getElementById("quickpicks").style.display = "none";
+  document.getElementById("searchBox").style.display = "none";
+}
+
+// Back button
+function goBack() {
+  document.getElementById("details-page").style.display = "none";
+  document.getElementById("trending").style.display = "block";
+  document.getElementById("theaters").style.display = "block";
+  document.getElementById("quickpicks").style.display = "block";
+  document.getElementById("searchBox").style.display = "block";
+}
+
+// SEARCH MOVIES
+document.getElementById("searchBox").addEventListener("input", async (e) => {
+  const q = e.target.value.trim();
+  if (q.length < 3) return;
+
+  const url = `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${q}`;
+  const movies = await fetchMovies(url);
+  renderMovies(movies, "trendingGrid"); // reuse grid
+});
+
+// Load data
+async function loadAll() {
+  renderMovies(await fetchMovies(`https://api.themoviedb.org/3/trending/movie/day?api_key=${API_KEY}`), "trendingGrid");
+
+  renderMovies(await fetchMovies(`https://api.themoviedb.org/3/movie/now_playing?api_key=${API_KEY}`), "theatersGrid");
+
+  renderMovies(await fetchMovies(`https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}`), "quickGrid");
+}
+
+loadAll();
+</script>
+
+</body>
+</html>
